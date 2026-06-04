@@ -17,6 +17,7 @@ class CPU:
             0x29: self.and_, 0x25: self.and_, 0x35: self.and_, 0x2D: self.and_, 0x3D: self.and_, 0x39: self.and_, 0x21: self.and_, 0x31: self.and_,
             0x0A: self.asl_, 0x06: self.asl_, 0x16: self.asl_, 0x0E: self.asl_, 0x1E: self.asl_,
             0x24: self.bit_, 0x2C: self.bit_,
+            0xA9: self.lda_, 0xA5: self.lda_, 0xB5: self.lda_, 0xAD: self.lda_, 0xBD: self.lda_, 0xB9: self.lda_, 0xA1: self.lda_, 0xB1: self.lda_,
         }
         self.statbits = {
             "n": 0x80, "v": 0x40, "-": 0x20, "b": 0x10,
@@ -27,18 +28,21 @@ class CPU:
             0x29: self.imd, 0x25: self.zp, 0x35: self.zpix, 0x2D: self.abslt, 0x3D: self.absix, 0x39: self.absiy, 0x21: self.indix, 0x31: self.indiy,
             0x0A: self.acc, 0x06: self.zp_, 0x16: self.zpix_, 0x0E: self.abs_, 0x1E: self.absix_,
             0x24: self.zp, 0x2C: self.abslt,
+            0xA9: self.imd, 0xA5: self.zp, 0xB5: self.zpix, 0xAD: self.abslt, 0xBD: self.absix, 0xB9: self.absiy, 0xA1: self.indix, 0xB1: self.indiy,
         }
         self.numbytes = {
             0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2, # ADC
             0x29: 2, 0x25: 2, 0x35: 2, 0x2D: 3, 0x3D: 3, 0x39: 3, 0x21: 2, 0x31: 2, # AND
             0x0A: 1, 0x06: 2, 0x16: 2, 0x0E: 3, 0x1E: 3,                            # ASL
             0x24: 2, 0x2C: 3,
+            0xA9: 2, 0xA5: 2, 0xB5: 2, 0xAD: 3, 0xBD: 3, 0xB9: 3, 0xA1: 2, 0xB1: 2,
         }
         self.numops = {
             0x69: 1, 0x65: 1, 0x75: 1, 0x6D: 2, 0x7D: 2, 0x79: 2, 0x61: 1, 0x71: 1,
             0x29: 1, 0x25: 1, 0x35: 1, 0x2D: 2, 0x3D: 2, 0x39: 2, 0x21: 1, 0x31: 1, 
             0x0A: 0, 0x06: 1, 0x16: 1, 0x0E: 2, 0x1E: 2,
             0x24: 1, 0x2C: 2,
+            0xA9: 1, 0xA5: 1, 0xB5: 1, 0xAD: 1, 0xBD: 1, 0xB9: 1, 0xA1: 1, 0xB1: 1,
         }
     def imd(self, op1, op2, code):
         self.value = op1
@@ -129,7 +133,6 @@ class CPU:
         else:
             self.mem[op1 + 256*op2] <<= 1
             self.mem[op1 + 256*op2] %= 0x100
-    # Next: BCC, BCS, and BEQ
     def bit_(self, op1, op2, code):
         if self.a & (self.value + 256+self.val2) == 0x00:
             self.flag("Z", bitset=True)
@@ -143,6 +146,12 @@ class CPU:
             self.flag("V", bitset=True)
         else:  
             self.flag("V", bitclear=True)
+    def lda_(self, op1, op2, code):
+        self.a = op1
+    def ldx_(self, op1, op2, code):
+        self.x = op1
+    def ldy_(self, op1, op2, code):
+        self.y = op1
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
@@ -156,10 +165,10 @@ class CPU:
             self.mnem[self.curr]()
 cpu = CPU()
 # ADC AND ASL BCC BCS BEQ BIT BMI BNE BPL BRK BVC BVS CLC
-# ✓   ✓   ✓   NXT NXT NXT ✓
+# ✓   ✓   ✓               ✓
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
-#
+#                         NXT NXT NXT     NXT NXT NXT NXT
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-#
+#     ✓   FCT FCT
 # RTS SBD SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
 #
