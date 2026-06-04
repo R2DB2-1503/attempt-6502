@@ -131,22 +131,22 @@ class CPU:
             self.mem[op1 + 256*op2] %= 0x100
     # Next: BCC, BCS, and BEQ
     def bit_(self, op1, op2, code):
-        if self.a & (value + 256+val2) == 0x00:
+        if self.a & (self.value + 256+self.val2) == 0x00:
             self.flag("Z", bitset=True)
         else:  
             self.flag("Z", bitclear=True)
-        if value & 0x80:
+        if self.value & 0x80:
             self.flag("N", bitset=True)
         else:  
             self.flag("N", bitclear=True)
-        if value & 0x40:
+        if self.value & 0x40:
             self.flag("V", bitset=True)
         else:  
             self.flag("V", bitclear=True)
     def executeinst(self):
-        self.curr = self.mem[pc]
-        self.next = self.mem[pc+1]
-        self.next2 = self.mem[pc+2]
+        self.curr = self.mem[self.pc]
+        self.next = self.mem[self.pc+1]
+        self.next2 = self.mem[self.pc+2]
         self.addrmodes[self.curr](self.next, self.next2, self.curr)
         if self.numops[self.curr] == 2:
             self.mnem[self.curr](self.value, self.val2)
