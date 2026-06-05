@@ -1,4 +1,4 @@
-import pygame
+import pygame, sys
 class CPU:
     def __init__(self):
         self.a = 0x00
@@ -27,7 +27,7 @@ class CPU:
             0x85: self.sta_, 0x95: self.sta_, 0x8D: self.sta_, 0x9D: self.sta_, 0x99: self.sta_, 0x81: self.sta_, 0x91: self.sta_,
             0x86: self.stx_, 0x96: self.stx_, 0x8E: self.stx_,
             0x84: self.stx_, 0x94: self.stx_, 0x8C: self.stx_,
-            0xEA: self.nop_,
+            0xEA: self.nop_, 0xAA: self.tax_, 0x8A: self.txa_, 0xA8: self.tay_, 0x98: self.tya_, 0x9A: self.txs_, 0xBA: self.tsx_,
             
         }
         self.statbits = {
@@ -37,7 +37,7 @@ class CPU:
         self.addrmodes = {
             0x69: self.imd, 0x65: self.zp, 0x75: self.zpix, 0x6D: self.abslt, 0x7D: self.absix, 0x79: self.absiy, 0x61: self.indix, 0x71: self.indiy,
             0x29: self.imd, 0x25: self.zp, 0x35: self.zpix, 0x2D: self.abslt, 0x3D: self.absix, 0x39: self.absiy, 0x21: self.indix, 0x31: self.indiy,
-            0x0A: self.acc, 0x06: self.zp_, 0x16: self.zpix_, 0x0E: self.abs_, 0x1E: self.absix_,
+            0x0A: self.acc, 0x06: self.zp, 0x16: self.zpix_, 0x0E: self.abslt_, 0x1E: self.absix_,
             0x24: self.zp, 0x2C: self.abslt,
             0xA9: self.imd, 0xA5: self.zp, 0xB5: self.zpix, 0xAD: self.abslt, 0xBD: self.absix, 0xB9: self.absiy, 0xA1: self.indix, 0xB1: self.indiy,
             0xA2: self.imd, 0xA6: self.zp, 0xB6: self.zpix, 0xAE: self.abslt, 0xBE: self.absix,
@@ -48,7 +48,7 @@ class CPU:
             0x85: self.zp, 0x95: self.zpix, 0x8D: self.abslt, 0x9D: self.absix, 0x99: self.absiy, 0x81: self.indix, 0x91: self.indiy,
             0x86: self.zp, 0x96: self.zpiy, 0x8E: self.abslt,
             0x84: self.zp, 0x94: self.zpix, 0x8C: self.abslt,
-            0xEA: self.impl,
+            0xEA: self.impl, 0xAA: self.impl, 0x8A: self.impl, 0xA8: self.impl, 0x98: self.impl, 0x9A: self.impl, 0xBA: self.impl,
         }
         self.numbytes = {
             0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2, # ADC
@@ -65,6 +65,7 @@ class CPU:
             0x86: 2, 0x96: 2, 0x8E: 3,
             0x84: 2, 0x94: 2, 0x8C: 3,
             0xEA: 1,
+            0xAA: 1, 0x8A: 1, 0xA8: 1, 0x98: 1, 0x9A: 1, 0xBA: 1,
         }
         self.numops = { # This is the number of bytes that the operands evaluate to.
             0x69: 1, 0x65: 1, 0x75: 1, 0x6D: 1, 0x7D: 1, 0x79: 1, 0x61: 1, 0x71: 1,
@@ -81,6 +82,7 @@ class CPU:
             0x86: 1, 0x96: 1, 0x8E: 2,
             0x84: 1, 0x94: 1, 0x8C: 2,
             0xEA: 0,
+            0xAA: 0, 0x8A: 0, 0xA8: 0, 0x98: 0, 0x9A: 0, 0xBA: 0,
         }
     def imd(self, op1, op2, code):
         self.value = op1
@@ -246,6 +248,18 @@ class CPU:
         self.pc = op1 + 256*op2
     def nop_(self, op1, op2, code):
         pass
+    def tax_(self, op1, op2, code):
+        self.x = self.a
+    def tay_(self, op1, op2, code):
+        self.y = self.a
+    def tsx_(self, op1, op2, code):
+        self.x = self.sp
+    def txa_(self, op1, op2, code):
+        self.a = self.x
+    def txs_(self, op1, op2, code):
+        self.sp = self.x
+    def tya_(self, op1, op2, code):
+        self.a = self.y
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
@@ -264,18 +278,36 @@ class Attempt6502_Window:
         self.width = width
         self.height = height
         self.title = title
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption(self.title)
+    def run(self):
+        clock = pygame.time.Clock()
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+            self.screen.fill((0,128,0))
+            pygame.display.flip()
+            clock.tick(60)
+        pygame.quit()
+        sys.exit()
 if __name__ == "__main__":
     cpu = CPU()
+    disp = Attempt6502_Window()
+    disp.run()
+# Upcycle 3 Version
+# Next Steps:
 # CPU:
 # ADC AND ASL BCC BCS BEQ BIT BMI BNE BPL BRK BVC BVS CLC
-#  ✓   ✓   ✓   X   X   X   ✓   X   X   X   X   X   X   X 
+#  ✓   ✓   ✓   X   X   X   ✓   X   X   X   X   X   X  HI4
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
-#  X   X   X   X   X   X   ✓   ✓   ✓   X   ✓   ✓   ✓   ✓  
+# HI4 HI4 HI4 LO4 LO4 LO4  ✓   ✓   ✓   X   ✓   ✓   ✓   ✓  
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-#  X   ✓   ✓   ✓   X  NXT  X   X   X   X   X   X   X   X 
+#  X   ✓   ✓   ✓   X   ✓   X   X   X   X   X   X   X   X 
 # RTS SBC SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
-#  X   ✓   X   X   X   ✓   ✓   ✓  NXT NXT NXT NXT NXT NXT
-# PYGAME
+#  X   ✓  HI4 HI4 HI4  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
+# PYGAME INITIALIZATION ✓
 # REGISTER DISPLAY
 # FLAGS
 # MEMORY
