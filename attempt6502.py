@@ -20,15 +20,21 @@ class CPU:
             0x24: self.bit_, 0x2C: self.bit_,
             0xA9: self.lda_, 0xA5: self.lda_, 0xB5: self.lda_, 0xAD: self.lda_, 0xBD: self.lda_, 0xB9: self.lda_, 0xA1: self.lda_, 0xB1: self.lda_,
             0xA2: self.ldx_, 0xA6: self.ldx_, 0xB6: self.ldx_, 0xAE: self.ldx_, 0xBE: self.ldx_,
-            0xA0: self.ldy_, 0xA6: self.ldy_, 0xB6: self.ldy_, 0xAC: self.ldy_, 0xBC: self.ldy_,
-            0xE6: self.inc_ , 0xF6: self.inc_ , 0xEE: self.inc_ , 0xFE: self.inc_,
+            0xA0: self.ldy_, 0xA4: self.ldy_, 0xB6: self.ldy_, 0xAC: self.ldy_, 0xBC: self.ldy_,
+            0xE6: self.inc_, 0xF6: self.inc_, 0xEE: self.inc_ , 0xFE: self.inc_,
             0xC6: self.dec_, 0xD6: self.dec_, 0xCE: self.dec_, 0xDE: self.dec_,
             0xCA: self.dex_, 0xE8: self.inx_, 0x88: self.dey_, 0xC8: self.iny_,
             0x85: self.sta_, 0x95: self.sta_, 0x8D: self.sta_, 0x9D: self.sta_, 0x99: self.sta_, 0x81: self.sta_, 0x91: self.sta_,
             0x86: self.stx_, 0x96: self.stx_, 0x8E: self.stx_,
-            0x84: self.stx_, 0x94: self.stx_, 0x8C: self.stx_,
+            0x84: self.sty_, 0x94: self.sty_, 0x8C: self.sty_,
             0xEA: self.nop_, 0xAA: self.tax_, 0x8A: self.txa_, 0xA8: self.tay_, 0x98: self.tya_, 0x9A: self.txs_, 0xBA: self.tsx_,
-            
+            0xC9: self.cmp_, 0xC5: self.cmp_, 0xD5: self.cmp_, 0xCD: self.cmp_, 0xDD: self.cmp_, 0xD9: self.cmp_, 0xC1: self.cmp_, 0xD1: self.cmp_,
+            0xE0: self.cpx_, 0xE4: self.cpx_, 0xEC: self.cpx_,
+            0xC0: self.cpy_, 0xC4: self.cpy_, 0xCC: self.cpy_,
+            0x00: self.brk_,
+            0x18: self.clc_, 0x38: self.sec_, 0x58: self.cli_, 0x78: self.sei_, 0xB8: self.clv_, 0xD8: self.cld_, 0xF8: self.sed_,
+            0x09: self.ora_, 0x05: self.ora_, 0x15: self.ora_, 0x0D: self.ora_, 0x1D: self.ora_, 0x19: self.ora_, 0x01: self.ora_, 0x11: self.ora_,
+            0x49: self.eor_, 0x45: self.eor_, 0x55: self.eor_, 0x4D: self.eor_, 0x5D: self.eor_, 0x59: self.eor_, 0x41: self.eor_, 0x51: self.eor_,
         }
         self.statbits = {
             "n": 0x80, "v": 0x40, "-": 0x20, "b": 0x10,
@@ -49,6 +55,13 @@ class CPU:
             0x86: self.zp, 0x96: self.zpiy, 0x8E: self.abslt,
             0x84: self.zp, 0x94: self.zpix, 0x8C: self.abslt,
             0xEA: self.impl, 0xAA: self.impl, 0x8A: self.impl, 0xA8: self.impl, 0x98: self.impl, 0x9A: self.impl, 0xBA: self.impl,
+            0xC9: self.imd, 0xC5: self.zp, 0xD5: self.zpix, 0xCD: self.abslt, 0xDD: self.absix, 0xD9: self.absiy, 0xC1: self.indix, 0xD1: self.indiy,
+            0xE0: self.imd, 0xE4: self.zp, 0xEC: self.abslt,
+            0xC0: self.imd, 0xC4: self.zp, 0xCC: self.abslt,
+            0x00: self.impl,
+            0x18: self.impl, 0x38: self.impl, 0x58: self.impl, 0x78: self.impl, 0xB8: self.impl, 0xD8: self.impl, 0xF8: self.impl,
+            0x09: self.imd, 0x05: self.zp, 0x15: self.zpix, 0x0D: self.abslt, 0x1D: self.absix, 0x19: self.absiy, 0x01: self.indix, 0x11: self.indiy,       
+            0x49: self.imd, 0x45: self.zp, 0x55: self.zpix, 0x4D: self.abslt, 0x5D: self.absix, 0x59: self.absiy, 0x41: self.indix, 0x51: self.indiy,
         }
         self.numbytes = {
             0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2, # ADC
@@ -66,6 +79,13 @@ class CPU:
             0x84: 2, 0x94: 2, 0x8C: 3,
             0xEA: 1,
             0xAA: 1, 0x8A: 1, 0xA8: 1, 0x98: 1, 0x9A: 1, 0xBA: 1,
+            0xC9: 2, 0xC5: 2, 0xD5: 2, 0xCD: 3, 0xDD: 3, 0xD9: 3, 0xC1: 2, 0xD1: 2,
+            0xE0: 2, 0xE4: 2, 0xEC: 3,
+            0xC0: 2, 0xC4: 2, 0xCC: 3,
+            0x00: 1,
+            0x18: 1, 0x38: 1, 0x58: 1, 0x78: 1, 0xB8: 1, 0xD8: 1, 0xF8: 1,
+            0x09: 2, 0x05: 2, 0x15: 2, 0x0D: 3, 0x1D: 3, 0x19: 3, 0x01: 2, 0x11: 2,
+            0x49: 2, 0x45: 2, 0x55: 2, 0x4D: 3, 0x5D: 3, 0x59: 3, 0x41: 2, 0x51: 2,
         }
         self.numops = { # This is the number of bytes that the operands evaluate to.
             0x69: 1, 0x65: 1, 0x75: 1, 0x6D: 1, 0x7D: 1, 0x79: 1, 0x61: 1, 0x71: 1,
@@ -78,11 +98,36 @@ class CPU:
             0xE6: 1, 0xF6: 1, 0xEE: 2, 0xFE: 2,
             0xC6: 1, 0xD6: 1, 0xCE: 2, 0xDE: 2,
             0xCA: 0, 0xE8: 0, 0x88: 0, 0xC8: 0,
-            0x85: 1, 0x95: 1, 0x8D: 2, 0x9D: 2, 0x99: 2, 0x81: 1, 0x91: 1,
-            0x86: 1, 0x96: 1, 0x8E: 2,
-            0x84: 1, 0x94: 1, 0x8C: 2,
+            0x85: 1, 0x95: 1, 0x8D: 1, 0x9D: 1, 0x99: 1, 0x81: 1, 0x91: 1,
+            0x86: 1, 0x96: 1, 0x8E: 1,
+            0x84: 1, 0x94: 1, 0x8C: 1,
             0xEA: 0,
             0xAA: 0, 0x8A: 0, 0xA8: 0, 0x98: 0, 0x9A: 0, 0xBA: 0,
+            0xC9: 1, 0xC5: 1, 0xD5: 1, 0xCD: 1, 0xDD: 1, 0xD9: 1, 0xC1: 1, 0xD1: 1,
+            0xE0: 1, 0xE4: 1, 0xEC: 1,
+            0xC0: 1, 0xC4: 1, 0xCC: 1,
+            0x00: 0,
+            0x18: 1, 0x38: 1, 0x58: 1, 0x78: 1, 0xB8: 1, 0xD8: 1, 0xF8: 1,
+            0x09: 1, 0x05: 1, 0x15: 1, 0x0D: 1, 0x1D: 1, 0x19: 1, 0x01: 1, 0x11: 1,
+            0x49: 1, 0x45: 1, 0x55: 1, 0x4D: 1, 0x5D: 1, 0x59: 1, 0x41: 1, 0x51: 1,
+        }
+        self.addrsym = { # In the form Mode, Prefix, Suffix
+            self.imd: ["#$",""],
+            self.zp: ["$",""],
+            self.zpix_: ["$",",X"],
+            self.zpix: ["$",",X"],
+            self.zpiy_: ["$",",Y"],
+            self.zpiy: ["$",",Y"],
+            self.abslt: ["$",""],
+            self.abslt_: ["$",""],
+            self.acc: ["A",""],
+            self.absix: ["$",",X"],
+            self.absix_: ["$",",X"],
+            self.absiy: ["$",",Y"],
+            self.absiy_: ["$",",Y"],
+            self.indir: ["[$","]"],
+            self.indix: ["[$",",X]"],
+            self.indiy: ["[$","],Y"],
         }
     def imd(self, op1, op2, code):
         self.value = op1
@@ -133,8 +178,8 @@ class CPU:
     def flag(self, flag, bitval=None):
         if bitval is not None:
             self.stat |= self.statbits[flag.lower()]
-    def adc_(self, op1, op2, code):
-        c_in = 0 if (self.stat & self.statbits["c"]) else 1
+    def adc_(self, op1=None, op2=None, code=None):
+        c_in = 0 if (self.stat & self.statbits["c"]) else 256
         old_a = self.a
         
         op1_not = op1 & 0xFF
@@ -147,7 +192,7 @@ class CPU:
         self.flag("z", self.a == 0)
         self.flag("n", bool(self.a & 0x80))
         self.flag("v", bool((old_a ^ self.a) & (op1_not ^ self.a) & 0x80))
-    def sbc_(self, op1, op2, code):
+    def sbc_(self, op1=None, op2=None, code=None):
         c_in = 1 if (self.stat & self.statbits["c"]) else 0
         old_a = self.a
         
@@ -173,14 +218,14 @@ class CPU:
             self.flag("N", bitval=True)
         else:
             self.flag("N", bitval=False)
-    def asl_(self, op1, op2, code):
+    def asl_(self, op1=None, op2=None, code=None):
         if code == 0x0A:
             self.a <<1
             self.a %= 0x100
         else:
             self.mem[op1 + 256*op2] <<= 1
             self.mem[op1 + 256*op2] %= 0x100
-    def bit_(self, op1, op2, code):
+    def bit_(self, op1=None, op2=None, code=None):
         if self.a & (self.value + 256+self.val2) == 0x00:
             self.flag("Z", bitval=True)
         else:  
@@ -193,7 +238,7 @@ class CPU:
             self.flag("V", bitval=True)
         else:  
             self.flag("V", bitval=False)
-    def lda_(self, op1, op2, code):
+    def lda_(self, op1=None, op2=None, code=None):
         self.a = op1
         if self.a == 0:
             self.flag("Z", bitval=True)
@@ -204,7 +249,7 @@ class CPU:
             self.flag("N", bitval=True)
         else:
             self.flag("N", bitval=False)
-    def ldx_(self, op1, op2, code):
+    def ldx_(self, op1=None, op2=None, code=None):
         self.x = op1
         if self.x == 0:
             self.flag("Z", bitval=True)
@@ -215,7 +260,7 @@ class CPU:
             self.flag("N", bitval=True)
         else:
             self.flag("N", bitval=False)
-    def ldy_(self, op1, op2, code):
+    def ldy_(self, op1=None, op2=None, code=None):
         self.y = op1
         if self.y == 0:
             self.flag("Z", bitval=True)
@@ -226,60 +271,122 @@ class CPU:
             self.flag("N", bitval=True)
         else:
             self.flag("N", bitval=False)
-    def sta_(self, op1, op2, code):
+    def sta_(self, op1=None, op2=None, code=None):
         self.mem[op1 + 256*op2] = self.a
-    def stx_(self, op1, op2, code):
+    def stx_(self, op1=None, op2=None, code=None):
         self.mem[op1 + 256*op2] = self.x
-    def sty_(self, op1, op2, code):
+    def sty_(self, op1=None, op2=None, code=None):
         self.mem[op1 + 256*op2] = self.y
-    def dec_(self, op1, op2, code):
+    def dec_(self, op1=None, op2=None, code=None):
         self.mem[op1 + 256*op2] -= 1
-    def inc_(self, op1, op2, code):
+    def inc_(self, op1=None, op2=None, code=None):
         self.mem[op1 + 256*op2] -= 1
-    def dex_(self, op1, op2, code):
+    def dex_(self, op1=None, op2=None, code=None):
         self.x -= 1
-    def dey_(self, op1, op2, code):
+    def dey_(self, op1=None, op2=None, code=None):
         self.y -= 1
-    def inx_(self, op1, op2, code):
+    def inx_(self, op1=None, op2=None, code=None):
         self.x += 1
-    def iny_(self, op1, op2, code):
+    def iny_(self, op1=None, op2=None, code=None):
         self.y += 1
-    def jmp_(self, op1, op2, code):
+    def jmp_(self, op1=None, op2=None, code=None):
         self.pc = op1 + 256*op2
-    def nop_(self, op1, op2, code):
+    def nop_(self, op1=None, op2=None, code=None):
         pass
-    def tax_(self, op1, op2, code):
+    def tax_(self, op1=None, op2=None, code=None):
         self.x = self.a
-    def tay_(self, op1, op2, code):
+    def tay_(self, op1=None, op2=None, code=None):
         self.y = self.a
-    def tsx_(self, op1, op2, code):
+    def tsx_(self, op1=None, op2=None, code=None):
         self.x = self.sp
-    def txa_(self, op1, op2, code):
+    def txa_(self, op1=None, op2=None, code=None):
         self.a = self.x
-    def txs_(self, op1, op2, code):
+    def txs_(self, op1=None, op2=None, code=None):
         self.sp = self.x
-    def tya_(self, op1, op2, code):
+    def tya_(self, op1=None, op2=None, code=None):
         self.a = self.y
+    def cmp_(self, op1=None, op2=None, code=None):
+        self.flag("Z", bitval=bool(self.a == op1))
+        self.flag("N", bitval=bool(self.a < op1))
+        self.flag("C", bitval=bool(self.a >= op1))
+    def cpx_(self, op1=None, op2=None, code=None):
+        self.flag("Z", bitval=bool(self.a == op1))
+        self.flag("N", bitval=bool(self.a < op1))
+        self.flag("C", bitval=bool(self.a >= op1))
+    def cpy_(self, op1=None, op2=None, code=None):
+        self.flag("Z", bitval=bool(self.a == op1))
+        self.flag("N", bitval=bool(self.a < op1))
+        self.flag("C", bitval=bool(self.a >= op1))
+    def brk_(self, op1=None, op2=None, code=None):
+        if self.stat & self.statbits["B".lower()]:
+            self.flag("B", bitval=True)
+            self.pc -= 1
+            print("HALT: BRK Reached.")
+    def clc_(self, op1=None, op2=None, code=None):
+        self.flag("C", bitval=False)
+    def sec_(self, op1=None, op2=None, code=None):
+        self.flag("C", bitval=True)
+    def cld_(self, op1=None, op2=None, code=None):
+        self.flag("D", bitval=False)
+    def sed_(self, op1=None, op2=None, code=None):
+        self.flag("D", bitval=True)
+    def clv_(self, op1=None, op2=None, code=None):
+        self.flag("V", bitval=False)
+    def cli_(self, op1=None, op2=None, code=None):
+        self.flag("I", bitval=False)
+    def sei_(self, op1=None, op2=None, code=None):
+        self.flag("I", bitval=True)
+    def ora_(self, op1=None, op2=None, code=None):
+        self.a |= op1
+    def eor_(self, op1=None, op2=None, code=None):
+        self.a ^= op1
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
         self.next2 = self.mem[self.pc+2]
         self.addrmodes[self.curr](self.next, self.next2, self.curr)
-        if self.numops[self.curr] == 2:
-            self.mnem[self.curr](self.value, self.val2)
-        elif self.numops[self.curr] == 1:
-            self.val2 = 0
-            self.mnem[self.curr](self.value)
-        elif self.numops[self.curr] == 0:
-            self.mnem[self.curr]()
+        self.mnem[self.curr](self.value, self.val2, self.curr)
+        self.pc += self.numbytes[self.curr]
 class Attempt6502_Window:
-    def __init__(self, width=800, height=600, title="Attempt-6502"):
+    def __init__(self, width=1600, height=700, title="Attempt-6502"):
         pygame.init()
         self.width = width
         self.height = height
         self.title = title
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(self.title)
+        self.font = pygame.font.SysFont("Cascadia Code", 24)
+        self.page = 0x00
+    def render_text(self, text, x, y, color=0x000000, antialias=True):
+        red = (color & 0xFF0000) >> 16
+        green = (color & 0x00FF00) >> 8
+        blue = (color & 0x0000FF) >> 0
+        surface = self.font.render(text, antialias, (red, green, blue))
+        self.screen.blit(surface, (x,y))
+    def regdisplay(self, a, x, y, pc, sr, sp):
+        self.render_text(f"a=${a:02x}", 20, 20, 0xFF0000)
+        self.render_text(f"x=${x:02x}", 20, 60, 0x00FF00)
+        self.render_text(f"y=${y:02x}", 20, 100, 0x0000FF)
+        self.render_text(f"pc=${pc:04x}", 20, 140, 0x00FFFF)
+        self.render_text(f"sp=${sp:02x}", 20, 180, 0xFF00FF)
+        self.render_text(f"sr=%{sr:08b}", 20, 220, 0xFFFF00)
+        self.render_text(f"   %nv-bdizc", 20, 260, 0xFFFF7F)
+    def func_name(self, func):
+        # 1. If it's already a string, just return it directly
+        if isinstance(func, str):
+            return func
+            
+        # 2. If it's None (handling the previous error), return a fallback
+        if func is None:
+            return "UNK"
+            
+        # 3. If it's a function, return its __name__ attribute
+        if hasattr(func, '__name__'):
+            return func.__name__
+            
+        # 4. Ultimate fallback if it's something else entirely
+        return str(func)
+
     def run(self):
         clock = pygame.time.Clock()
         running = True
@@ -287,29 +394,81 @@ class Attempt6502_Window:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-            self.screen.fill((0,128,0))
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        cpu.executeinst()
+                    if event.key == pygame.K_UP:
+                        self.page = (self.page + 0x10) & 0xFF
+                    if event.key == pygame.K_DOWN:
+                        self.page = (self.page - 0x10) & 0xFF
+                    if event.key == pygame.K_LEFT:
+                        self.page = (self.page - 0x01) & 0xFF
+                    if event.key == pygame.K_RIGHT:
+                        self.page = (self.page + 0x10) & 0xFF
+            self.screen.fill((0,0,0))
+            self.regdisplay(cpu.a, cpu.x, cpu.y, cpu.pc, cpu.stat, cpu.sp)
+            try:
+                # 1. Grab the current instruction method from the dictionary
+                current_instr = cpu.mnem[cpu.curr]
+                
+                # 2. Extract its function name cleanly (e.g., <bound method CPU.adc_ ...> -> "ADC")
+                mnemonic = current_instr.__func__.__name__.rstrip('_').upper()
+
+                # 3. Get the addressing mode method object (e.g., self.impl)
+                mode_method = cpu.addrmodes[cpu.curr]
+                
+                # 4. Use that method object DIRECTLY to look up your prefix/suffix list
+                # If the mode is missing (like self.impl), default to empty strings ["", ""]
+                symbols = cpu.addrsym.get(mode_method, ["", ""])
+                prefix = symbols[0]
+                suffix = symbols[1]
+                butes = cpu.numbytes[cpu.curr]
+                if butes == 1:
+                    display_text = f"{mnemonic}"
+                if butes == 2:
+                    display_text = f"{mnemonic} {prefix}{cpu.next:02x}{suffix}"
+                if butes == 3:
+                    display_text = f"{mnemonic} {prefix}{cpu.next:02x}{cpu.next2:02x}{suffix}"
+                self.render_text(display_text, 400, 20, 0xff7f00)
+            except Exception as e:
+                # If any opcode is missing or unmapped, it catches safely here
+                print(str(e))
+            self.render_text(f"{self.page:02x}", -1.25*45 + 800, 0*30 + 20, 0xFFFFFF)
+            for j in range(16):
+                self.render_text(f"0{j:01x}", j*45 + 800 , 0*30 + 20, 0xFFFFFF)
+            for i in range(16):
+                self.render_text(f"{i:01x}0", -1.25*45 + 800 , i*30 + 60, 0xFFFFFF)
+            for i in range(16):
+                for j in range(16):
+                    self.render_text(f"{cpu.mem[16*i + j + (self.page * 0x100)]:02x}", j*45 + 800 , i*30 + 60, 0xFFFFFF)
             pygame.display.flip()
             clock.tick(60)
         pygame.quit()
         sys.exit()
 if __name__ == "__main__":
+    data = input("Enter bytes: ")
+    program = [int(b, 16) for b in data.split()]
     cpu = CPU()
+    for i in range(len(program)):
+        cpu.mem[i+0x8000] = program[i]
     disp = Attempt6502_Window()
     disp.run()
-# Upcycle 3 Version
+# Downcycle 4 Version
 # Next Steps:
 # CPU:
 # ADC AND ASL BCC BCS BEQ BIT BMI BNE BPL BRK BVC BVS CLC
-#  ✓   ✓   ✓   X   X   X   ✓   X   X   X   X   X   X  HI4
+#  ✓   ✓   ✓  h05 h05 h05  ✓  h05 h05 h05  ✓  h05 h05  ✓ 
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
-# HI4 HI4 HI4 LO4 LO4 LO4  ✓   ✓   ✓   X   ✓   ✓   ✓   ✓  
+#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-#  X   ✓   ✓   ✓   X   ✓   X   X   X   X   X   X   X   X 
+# l06  ✓   ✓   ✓  l07  ✓   ✓  l05 l05 l05 l05 h06 h06 l07
 # RTS SBC SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
-#  X   ✓  HI4 HI4 HI4  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
+# l06  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
 # PYGAME INITIALIZATION ✓
-# REGISTER DISPLAY
-# FLAGS
-# MEMORY
+# REGISTER DISPLAY ✓
+# FLAGS ✓
+# CURRENT INSTRUCTION ✓ 
+# MEMORY VIEWER ✓ 
 # DISASSEMBLY
-# CODE EDITOR
+# EXPAND MEMORY VIEWER
+# CODE EDITOR 
