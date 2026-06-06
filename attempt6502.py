@@ -17,6 +17,7 @@ class CPU:
             0x69: self.adc_, 0x65: self.adc_, 0x75: self.adc_, 0x6D: self.adc_, 0x7D: self.adc_, 0x79: self.adc_, 0x61: self.adc_, 0x71: self.adc_,
             0x29: self.and_, 0x25: self.and_, 0x35: self.and_, 0x2D: self.and_, 0x3D: self.and_, 0x39: self.and_, 0x21: self.and_, 0x31: self.and_,
             0x0A: self.asl_, 0x06: self.asl_, 0x16: self.asl_, 0x0E: self.asl_, 0x1E: self.asl_,
+            0x4A: self.lsr_, 0x46: self.lsr_, 0x56: self.lsr_, 0x4E: self.lsr_, 0x5E: self.lsr_,
             0x24: self.bit_, 0x2C: self.bit_,
             0xA9: self.lda_, 0xA5: self.lda_, 0xB5: self.lda_, 0xAD: self.lda_, 0xBD: self.lda_, 0xB9: self.lda_, 0xA1: self.lda_, 0xB1: self.lda_,
             0xA2: self.ldx_, 0xA6: self.ldx_, 0xB6: self.ldx_, 0xAE: self.ldx_, 0xBE: self.ldx_,
@@ -35,6 +36,7 @@ class CPU:
             0x18: self.clc_, 0x38: self.sec_, 0x58: self.cli_, 0x78: self.sei_, 0xB8: self.clv_, 0xD8: self.cld_, 0xF8: self.sed_,
             0x09: self.ora_, 0x05: self.ora_, 0x15: self.ora_, 0x0D: self.ora_, 0x1D: self.ora_, 0x19: self.ora_, 0x01: self.ora_, 0x11: self.ora_,
             0x49: self.eor_, 0x45: self.eor_, 0x55: self.eor_, 0x4D: self.eor_, 0x5D: self.eor_, 0x59: self.eor_, 0x41: self.eor_, 0x51: self.eor_,
+            0x48: self.pha_, 0x68: self.pla_, 0x08: self.php_, 0x28: self.plp_,
         }
         self.statbits = {
             "n": 0x80, "v": 0x40, "-": 0x20, "b": 0x10,
@@ -44,6 +46,7 @@ class CPU:
             0x69: self.imd, 0x65: self.zp, 0x75: self.zpix, 0x6D: self.abslt, 0x7D: self.absix, 0x79: self.absiy, 0x61: self.indix, 0x71: self.indiy,
             0x29: self.imd, 0x25: self.zp, 0x35: self.zpix, 0x2D: self.abslt, 0x3D: self.absix, 0x39: self.absiy, 0x21: self.indix, 0x31: self.indiy,
             0x0A: self.acc, 0x06: self.zp, 0x16: self.zpix_, 0x0E: self.abslt_, 0x1E: self.absix_,
+            0x4A: self.acc, 0x46: self.zp, 0x56: self.zpix_, 0x4E: self.abslt_, 0x5E: self.absix_,
             0x24: self.zp, 0x2C: self.abslt,
             0xA9: self.imd, 0xA5: self.zp, 0xB5: self.zpix, 0xAD: self.abslt, 0xBD: self.absix, 0xB9: self.absiy, 0xA1: self.indix, 0xB1: self.indiy,
             0xA2: self.imd, 0xA6: self.zp, 0xB6: self.zpix, 0xAE: self.abslt, 0xBE: self.absix,
@@ -62,11 +65,14 @@ class CPU:
             0x18: self.impl, 0x38: self.impl, 0x58: self.impl, 0x78: self.impl, 0xB8: self.impl, 0xD8: self.impl, 0xF8: self.impl,
             0x09: self.imd, 0x05: self.zp, 0x15: self.zpix, 0x0D: self.abslt, 0x1D: self.absix, 0x19: self.absiy, 0x01: self.indix, 0x11: self.indiy,       
             0x49: self.imd, 0x45: self.zp, 0x55: self.zpix, 0x4D: self.abslt, 0x5D: self.absix, 0x59: self.absiy, 0x41: self.indix, 0x51: self.indiy,
+            0x48: self.impl, 0x68: self.impl, 0x08: self.impl, 0x28: self.impl,
+
         }
         self.numbytes = {
             0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2, # ADC
             0x29: 2, 0x25: 2, 0x35: 2, 0x2D: 3, 0x3D: 3, 0x39: 3, 0x21: 2, 0x31: 2, # AND
-            0x0A: 1, 0x06: 2, 0x16: 2, 0x0E: 3, 0x1E: 3,                            # ASL
+            0x0A: 1, 0x06: 2, 0x16: 2, 0x0E: 3, 0x1E: 3,  
+            0x4A: 1, 0x46: 2, 0x56: 2, 0x4E: 3, 0x5E: 3,                            # ASL
             0x24: 2, 0x2C: 3,
             0xA9: 2, 0xA5: 2, 0xB5: 2, 0xAD: 3, 0xBD: 3, 0xB9: 3, 0xA1: 2, 0xB1: 2,
             0xA2: 2, 0xA6: 2, 0xB6: 2, 0xAE: 3, 0xBE: 3,
@@ -86,11 +92,13 @@ class CPU:
             0x18: 1, 0x38: 1, 0x58: 1, 0x78: 1, 0xB8: 1, 0xD8: 1, 0xF8: 1,
             0x09: 2, 0x05: 2, 0x15: 2, 0x0D: 3, 0x1D: 3, 0x19: 3, 0x01: 2, 0x11: 2,
             0x49: 2, 0x45: 2, 0x55: 2, 0x4D: 3, 0x5D: 3, 0x59: 3, 0x41: 2, 0x51: 2,
+            0x48: 1, 0x68: 1, 0x08: 1, 0x28: 1,
         }
         self.numops = { # This is the number of bytes that the operands evaluate to.
             0x69: 1, 0x65: 1, 0x75: 1, 0x6D: 1, 0x7D: 1, 0x79: 1, 0x61: 1, 0x71: 1,
             0x29: 1, 0x25: 1, 0x35: 1, 0x2D: 1, 0x3D: 1, 0x39: 1, 0x21: 1, 0x31: 1, 
             0x0A: 0, 0x06: 1, 0x16: 1, 0x0E: 1, 0x1E: 1,
+            0x4A: 0, 0x46: 1, 0x56: 1, 0x4E: 1, 0x5E: 1,
             0x24: 1, 0x2C: 1,
             0xA9: 1, 0xA5: 1, 0xB5: 1, 0xAD: 1, 0xBD: 1, 0xB9: 1, 0xA1: 1, 0xB1: 1,
             0xA2: 1, 0xA6: 1, 0xB6: 1, 0xAE: 1, 0xBE: 1,
@@ -110,6 +118,7 @@ class CPU:
             0x18: 1, 0x38: 1, 0x58: 1, 0x78: 1, 0xB8: 1, 0xD8: 1, 0xF8: 1,
             0x09: 1, 0x05: 1, 0x15: 1, 0x0D: 1, 0x1D: 1, 0x19: 1, 0x01: 1, 0x11: 1,
             0x49: 1, 0x45: 1, 0x55: 1, 0x4D: 1, 0x5D: 1, 0x59: 1, 0x41: 1, 0x51: 1,
+            0x48: 0, 0x68: 0, 0x08: 0, 0x28: 0,
         }
         self.addrsym = { # In the form Mode, Prefix, Suffix
             self.imd: ["#$",""],
@@ -220,10 +229,36 @@ class CPU:
             self.flag("N", bitval=False)
     def asl_(self, op1=None, op2=None, code=None):
         if code == 0x0A:
-            self.a <<1
-            self.a %= 0x100
+            if self.a & 0x80:
+                self.sec_()
+                self.a %= 0x80
+            self.flag("N", bitval=bool(self.a & 0x40))
+            self.flag("Z", bitval=bool(self.a == 0x00))
+            self.a << 1
         else:
-            self.mem[op1 + 256*op2] <<= 1
+            if self.mem[op1 + 256*op2] & 0x80:
+                self.sec_()
+                self.self.mem[op1 + 256*op2] %= 0x80
+            self.flag("N", self.mem[op1 + 256*op2] & 0x40)
+            self.flag("Z", bitval=bool(self.mem[op1 + 256*op2] == 0x00))
+            self.mem[op1 + 256*op2] << 1
+    def lsr_(self, op1=None, op2=None, code=None):
+        if code == 0x4A:
+            if self.a & 0x01:
+                self.sec_()
+            else:
+                self.clc_()
+            self.a >> 1
+            self.flag("N", bitval=bool(self.a & 0x80))
+            self.flag("Z", bitval=bool(self.a == 0x00))
+        else: 
+            if self.mem[op1 + 256*op2] & 0x01:
+                self.sec_()
+            else:
+                self.clc_()
+            self.mem[op1 + 256*op2] >> 1
+            self.flag("N", bitval=bool(self.mem[op1 + 256*op2] & 0x80))
+            self.flag("Z", bitval=bool(self.mem[op1 + 256*op2] == 0x00))
             self.mem[op1 + 256*op2] %= 0x100
     def bit_(self, op1=None, op2=None, code=None):
         if self.a & (self.value + 256+self.val2) == 0x00:
@@ -318,7 +353,7 @@ class CPU:
         self.flag("N", bitval=bool(self.a < op1))
         self.flag("C", bitval=bool(self.a >= op1))
     def brk_(self, op1=None, op2=None, code=None):
-        if self.stat & self.statbits["B".lower()]:
+        if self.stat & self.statbits["B".lower()] and self.pc != 0x8000:
             self.flag("B", bitval=True)
             self.pc -= 1
             print("HALT: BRK Reached.")
@@ -340,6 +375,21 @@ class CPU:
         self.a |= op1
     def eor_(self, op1=None, op2=None, code=None):
         self.a ^= op1
+    def pha_(self, op1=None, op2=None, code=None):
+        self.sp -= 1
+        self.mem[self.sp + 0x100] = self.a
+    def php_(self, op1=None, op2=None, code=None):
+        self.sp -= 1
+        self.sp &= 0xFF
+        self.mem[self.sp + 0x100] = self.stat
+    def pla_(self, op1=None, op2=None, code=None):
+        self.stat = self.mem[self.sp + 0x100]
+        self.sp += 1
+        self.sp &= 0xFF
+    def plp_(self, op1=None, op2=None, code=None):
+        self.stat = self.mem[self.sp + 0x100]
+        self.sp += 1
+        self.sp &= 0xFF
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
@@ -407,32 +457,39 @@ class Attempt6502_Window:
                         self.page = (self.page + 0x10) & 0xFF
             self.screen.fill((0,0,0))
             self.regdisplay(cpu.a, cpu.x, cpu.y, cpu.pc, cpu.stat, cpu.sp)
-            try:
-                # 1. Grab the current instruction method from the dictionary
-                current_instr = cpu.mnem[cpu.curr]
-                
-                # 2. Extract its function name cleanly (e.g., <bound method CPU.adc_ ...> -> "ADC")
-                mnemonic = current_instr.__func__.__name__.rstrip('_').upper()
-
-                # 3. Get the addressing mode method object (e.g., self.impl)
-                mode_method = cpu.addrmodes[cpu.curr]
-                
-                # 4. Use that method object DIRECTLY to look up your prefix/suffix list
-                # If the mode is missing (like self.impl), default to empty strings ["", ""]
-                symbols = cpu.addrsym.get(mode_method, ["", ""])
-                prefix = symbols[0]
-                suffix = symbols[1]
-                butes = cpu.numbytes[cpu.curr]
-                if butes == 1:
-                    display_text = f"{mnemonic}"
-                if butes == 2:
-                    display_text = f"{mnemonic} {prefix}{cpu.next:02x}{suffix}"
-                if butes == 3:
-                    display_text = f"{mnemonic} {prefix}{cpu.next:02x}{cpu.next2:02x}{suffix}"
-                self.render_text(display_text, 400, 20, 0xff7f00)
-            except Exception as e:
-                # If any opcode is missing or unmapped, it catches safely here
-                print(str(e))
+            # 1. Grab the current instruction method from the dictionary
+            current_instr = cpu.mnem[cpu.curr]
+            next_instr = cpu.mnem[cpu.mem[cpu.pc + cpu.numbytes[cpu.curr]]]
+            # 2. Extract its function name cleanly (e.g., <bound method CPU.adc_ ...> -> "ADC")
+            mnemonic = self.func_name(current_instr).rstrip('_').upper()
+            mnemonicnext = self.func_name(next_instr).rstrip('_').upper()
+            # 3. Get the addressing mode method object (e.g., self.impl)
+            mode_method = cpu.addrmodes[cpu.curr]
+            mode_methodn = cpu.addrmodes[cpu.mem[cpu.pc + cpu.numbytes[cpu.curr]]]
+            # 4. Use that method object DIRECTLY to look up your prefix/suffix list
+            # If the mode is missing (like self.impl), default to empty strings ["", ""]
+            symbols = cpu.addrsym.get(mode_method, ["", ""])
+            symbolsn = cpu.addrsym.get(mode_methodn, ["", ""])
+            prefix = symbols[0]
+            prefixn = symbolsn[0]
+            suffix = symbols[1]
+            suffixn = symbolsn[1]
+            butes = cpu.numbytes[cpu.curr]
+            bwtes = cpu.numbytes[cpu.mem[cpu.pc + butes]]
+            if butes == 1:
+                display_text = f"{mnemonic}"
+            if butes == 2:
+                display_text = f"{mnemonic} {prefix}{cpu.next:02x}{suffix}"
+            if butes == 3:
+                display_text = f"{mnemonic} {prefix}{cpu.next:02x}{cpu.next2:02x}{suffix}"
+            if bwtes == 1:
+                display_text2 = f"{mnemonicnext}"
+            if bwtes == 2:
+                display_text2 = f"{mnemonicnext} {prefixn}{cpu.mem[cpu.pc + cpu.numbytes[cpu.curr] + 1]:02x}{suffix}"
+            if bwtes == 3:
+                display_text2 = f"{mnemonic} {prefixn}{cpu.mem[cpu.pc + cpu.numbytes[cpu.curr] + 1]:02x}{cpu.mem[cpu.pc + cpu.numbytes[cpu.curr] + 2]:02x}{suffixn}"
+            self.render_text(display_text, 400, 20, 0xff7f00)
+            self.render_text(display_text2, 400, 60, 0xcc5c00)
             self.render_text(f"{self.page:02x}", -1.25*45 + 800, 0*30 + 20, 0xFFFFFF)
             for j in range(16):
                 self.render_text(f"0{j:01x}", j*45 + 800 , 0*30 + 20, 0xFFFFFF)
@@ -453,7 +510,11 @@ if __name__ == "__main__":
         cpu.mem[i+0x8000] = program[i]
     disp = Attempt6502_Window()
     disp.run()
-# Downcycle 4 Version
+# Upcycle 4 Version
+# Ready to Commit: Yes
+#                               HI CODE PD
+# DOWNCYCLE           [UPCYCLE ]           DOWNCYCLE (repeats)
+#           LO CODE PD
 # Next Steps:
 # CPU:
 # ADC AND ASL BCC BCS BEQ BIT BMI BNE BPL BRK BVC BVS CLC
@@ -461,14 +522,15 @@ if __name__ == "__main__":
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
 #  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-# l06  ✓   ✓   ✓  l07  ✓   ✓  l05 l05 l05 l05 h06 h06 l07
+# l06  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  l05 l05 l07
 # RTS SBC SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
 # l06  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
 # PYGAME INITIALIZATION ✓
 # REGISTER DISPLAY ✓
 # FLAGS ✓
 # CURRENT INSTRUCTION ✓ 
-# MEMORY VIEWER ✓ 
-# DISASSEMBLY
+# MEMORY VIEWER ✓
+# PRIMITIVE CODE EDITOR ✓ 
+# DISASSEMBLY ✓ 
 # EXPAND MEMORY VIEWER
 # CODE EDITOR 
