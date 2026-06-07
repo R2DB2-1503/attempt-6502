@@ -18,6 +18,8 @@ class CPU:
             0x29: self.and_, 0x25: self.and_, 0x35: self.and_, 0x2D: self.and_, 0x3D: self.and_, 0x39: self.and_, 0x21: self.and_, 0x31: self.and_,
             0x0A: self.asl_, 0x06: self.asl_, 0x16: self.asl_, 0x0E: self.asl_, 0x1E: self.asl_,
             0x4A: self.lsr_, 0x46: self.lsr_, 0x56: self.lsr_, 0x4E: self.lsr_, 0x5E: self.lsr_,
+            0x2A: self.rol_, 0x26: self.rol_, 0x36: self.rol_, 0x2E: self.rol_, 0x3E: self.rol_,
+            0x6A: self.ror_, 0x66: self.ror_, 0x76: self.ror_, 0x6E: self.ror_, 0x7E: self.ror_,
             0x24: self.bit_, 0x2C: self.bit_,
             0xA9: self.lda_, 0xA5: self.lda_, 0xB5: self.lda_, 0xAD: self.lda_, 0xBD: self.lda_, 0xB9: self.lda_, 0xA1: self.lda_, 0xB1: self.lda_,
             0xA2: self.ldx_, 0xA6: self.ldx_, 0xB6: self.ldx_, 0xAE: self.ldx_, 0xBE: self.ldx_,
@@ -38,6 +40,9 @@ class CPU:
             0x49: self.eor_, 0x45: self.eor_, 0x55: self.eor_, 0x4D: self.eor_, 0x5D: self.eor_, 0x59: self.eor_, 0x41: self.eor_, 0x51: self.eor_,
             0x48: self.pha_, 0x68: self.pla_, 0x08: self.php_, 0x28: self.plp_,
             0x10: self.bpl_, 0x30: self.bmi_, 0x50: self.bvc_, 0x70: self.bvs_, 0x90: self.bcc_, 0xB0: self.bcs_, 0xD0: self.bne_, 0xF0: self.beq_,
+            0x20: self.jsr_,
+            0x60: self.rts_,
+            0x40: self.rti_,
         }
         self.statbits = {
             "n": 0x80, "v": 0x40, "-": 0x20, "b": 0x10,
@@ -48,6 +53,8 @@ class CPU:
             0x29: self.imd, 0x25: self.zp, 0x35: self.zpix, 0x2D: self.abslt, 0x3D: self.absix, 0x39: self.absiy, 0x21: self.indix, 0x31: self.indiy,
             0x0A: self.acc, 0x06: self.zp, 0x16: self.zpix_, 0x0E: self.abslt_, 0x1E: self.absix_,
             0x4A: self.acc, 0x46: self.zp, 0x56: self.zpix_, 0x4E: self.abslt_, 0x5E: self.absix_,
+            0x2A: self.acc, 0x26: self.zp, 0x36: self.zpix_, 0x2E: self.abslt_, 0x5E: self.absix_,
+            0x6A: self.acc, 0x66: self.zp, 0x76: self.zpix_, 0x6E: self.abslt_, 0x7E: self.absix_,
             0x24: self.zp, 0x2C: self.abslt,
             0xA9: self.imd, 0xA5: self.zp, 0xB5: self.zpix, 0xAD: self.abslt, 0xBD: self.absix, 0xB9: self.absiy, 0xA1: self.indix, 0xB1: self.indiy,
             0xA2: self.imd, 0xA6: self.zp, 0xB6: self.zpix, 0xAE: self.abslt, 0xBE: self.absix,
@@ -68,12 +75,17 @@ class CPU:
             0x49: self.imd, 0x45: self.zp, 0x55: self.zpix, 0x4D: self.abslt, 0x5D: self.absix, 0x59: self.absiy, 0x41: self.indix, 0x51: self.indiy,
             0x48: self.impl, 0x68: self.impl, 0x08: self.impl, 0x28: self.impl,
             0x10: self.rel, 0x30: self.rel, 0x50: self.rel, 0x70: self.rel, 0x90: self.rel, 0xB0: self.rel, 0xD0: self.rel, 0xF0: self.rel,
+            0x20: self.abslt,
+            0x60: self.impl,
+            0x40: self.impl,
         }
         self.numbytes = {
             0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2, # ADC
             0x29: 2, 0x25: 2, 0x35: 2, 0x2D: 3, 0x3D: 3, 0x39: 3, 0x21: 2, 0x31: 2, # AND
             0x0A: 1, 0x06: 2, 0x16: 2, 0x0E: 3, 0x1E: 3,  
-            0x4A: 1, 0x46: 2, 0x56: 2, 0x4E: 3, 0x5E: 3,                            # ASL
+            0x4A: 1, 0x46: 2, 0x56: 2, 0x4E: 3, 0x5E: 3,
+            0x2A: 1, 0x26: 2, 0x36: 2, 0x2E: 3, 0x3E: 3,  
+            0x6A: 1, 0x66: 2, 0x76: 2, 0x6E: 3, 0x7E: 3,                            # ASL
             0x24: 2, 0x2C: 3,
             0xA9: 2, 0xA5: 2, 0xB5: 2, 0xAD: 3, 0xBD: 3, 0xB9: 3, 0xA1: 2, 0xB1: 2,
             0xA2: 2, 0xA6: 2, 0xB6: 2, 0xAE: 3, 0xBE: 3,
@@ -95,12 +107,17 @@ class CPU:
             0x49: 2, 0x45: 2, 0x55: 2, 0x4D: 3, 0x5D: 3, 0x59: 3, 0x41: 2, 0x51: 2,
             0x48: 1, 0x68: 1, 0x08: 1, 0x28: 1,
             0x10: 2, 0x30: 2, 0x50: 2, 0x70: 2, 0x90: 2, 0xB0: 2, 0xD0: 2, 0xF0: 2,
+            0x20: 3,
+            0x60: 1,
+            0x40: 1,
         }
-        self.numops = { # This is the number of bytes that the operands evaluate to.
+        self.numops = { # This is number of bytes that operands evaluate to.
             0x69: 1, 0x65: 1, 0x75: 1, 0x6D: 1, 0x7D: 1, 0x79: 1, 0x61: 1, 0x71: 1,
             0x29: 1, 0x25: 1, 0x35: 1, 0x2D: 1, 0x3D: 1, 0x39: 1, 0x21: 1, 0x31: 1, 
             0x0A: 0, 0x06: 1, 0x16: 1, 0x0E: 1, 0x1E: 1,
             0x4A: 0, 0x46: 1, 0x56: 1, 0x4E: 1, 0x5E: 1,
+            0x2A: 0, 0x26: 1, 0x36: 1, 0x2E: 1, 0x3E: 1,
+            0x6A: 0, 0x66: 1, 0x76: 1, 0x6E: 1, 0x7E: 1,
             0x24: 1, 0x2C: 1,
             0xA9: 1, 0xA5: 1, 0xB5: 1, 0xAD: 1, 0xBD: 1, 0xB9: 1, 0xA1: 1, 0xB1: 1,
             0xA2: 1, 0xA6: 1, 0xB6: 1, 0xAE: 1, 0xBE: 1,
@@ -122,8 +139,11 @@ class CPU:
             0x49: 1, 0x45: 1, 0x55: 1, 0x4D: 1, 0x5D: 1, 0x59: 1, 0x41: 1, 0x51: 1,
             0x48: 0, 0x68: 0, 0x08: 0, 0x28: 0,
             0x10: 2, 0x30: 2, 0x50: 2, 0x70: 2, 0x90: 2, 0xB0: 2, 0xD0: 2, 0xF0: 2,
+            0x20: 2,
+            0x60: 0,
+            0x40: 0,
         }
-        self.addrsym = { # In the form Mode, Prefix, Suffix
+        self.addrsym = { # In form Mode, Prefix, Suffix
             self.imd: ["#$",""],
             self.zp: ["$",""],
             self.zpix_: ["$",",X"],
@@ -204,7 +224,7 @@ class CPU:
         
         self.a = result & 0xFF
         
-        # Flags accept direct boolean expressions
+        
         self.flag("c", result > 0xFF)
         self.flag("z", self.a == 0)
         self.flag("n", bool(self.a & 0x80))
@@ -218,7 +238,7 @@ class CPU:
         
         self.a = result & 0xFF
         
-        # Flags accept direct boolean expressions
+        
         self.flag("c", result > 0xFF)
         self.flag("z", self.a == 0)
         self.flag("n", bool(self.a & 0x80))
@@ -236,38 +256,101 @@ class CPU:
         else:
             self.flag("N", bitval=False)
     def asl_(self, op1=None, op2=None, code=None):
-        if code == 0x0A:
-            if self.a & 0x80:
-                self.sec_()
-                self.a %= 0x80
-            self.flag("N", bitval=bool(self.a & 0x40))
-            self.flag("Z", bitval=bool(self.a == 0x00))
-            self.a << 1
+        
+        is_accumulator = (code == 0x0A)
+        addr = op1 + 256 * op2 if not is_accumulator else None
+        val = self.a if is_accumulator else self.mem[addr]
+
+        
+        if val & 0x80:
+            self.sec_()
         else:
-            if self.mem[op1 + 256*op2] & 0x80:
-                self.sec_()
-                self.self.mem[op1 + 256*op2] %= 0x80
-            self.flag("N", self.mem[op1 + 256*op2] & 0x40)
-            self.flag("Z", bitval=bool(self.mem[op1 + 256*op2] == 0x00))
-            self.mem[op1 + 256*op2] << 1
+            self.clc_()
+
+        
+        val = (val << 1) & 0xFF
+
+        
+        self.flag("N", bitval=bool(val & 0x80))
+        self.flag("Z", bitval=bool(val == 0x00))
+
+        
+        if is_accumulator:
+            self.a = val
+        else:
+            self.mem[addr] = val
+
     def lsr_(self, op1=None, op2=None, code=None):
-        if code == 0x4A:
-            if self.a & 0x01:
-                self.sec_()
-            else:
-                self.clc_()
-            self.a >> 1
-            self.flag("N", bitval=bool(self.a & 0x80))
-            self.flag("Z", bitval=bool(self.a == 0x00))
-        else: 
-            if self.mem[op1 + 256*op2] & 0x01:
-                self.sec_()
-            else:
-                self.clc_()
-            self.mem[op1 + 256*op2] >> 1
-            self.flag("N", bitval=bool(self.mem[op1 + 256*op2] & 0x80))
-            self.flag("Z", bitval=bool(self.mem[op1 + 256*op2] == 0x00))
-            self.mem[op1 + 256*op2] %= 0x100
+        is_accumulator = (code == 0x4A)
+        addr = op1 + 256 * op2 if not is_accumulator else None
+        val = self.a if is_accumulator else self.mem[addr]
+
+        
+        if val & 0x01:
+            self.sec_()
+        else:
+            self.clc_()
+
+        
+        val >>= 1
+
+        
+        self.flag("N", bitval=False)
+        self.flag("Z", bitval=bool(val == 0x00))
+
+        if is_accumulator:
+            self.a = val
+        else:
+            self.mem[addr] = val
+
+    def rol_(self, op1=None, op2=None, code=None):
+        is_accumulator = (code == 0x2A)
+        addr = op1 + 256 * op2 if not is_accumulator else None
+        val = self.a if is_accumulator else self.mem[addr]
+
+        
+        old_carry = 1 if self.get_carry() else 0 
+
+        
+        if val & 0x80:
+            self.sec_()
+        else:
+            self.clc_()
+
+        
+        val = ((val << 1) | old_carry) & 0xFF
+
+        self.flag("N", bitval=bool(val & 0x80))
+        self.flag("Z", bitval=bool(val == 0x00))
+
+        if is_accumulator:
+            self.a = val
+        else:
+            self.mem[addr] = val
+
+    def ror_(self, op1=None, op2=None, code=None):
+        is_accumulator = (code == 0x6A)
+        addr = op1 + 256 * op2 if not is_accumulator else None
+        val = self.a if is_accumulator else self.mem[addr]
+
+        
+        old_carry = 0x80 if self.get_carry() else 0 
+        if val & 0x01:
+            self.sec_()
+        else:
+            self.clc_()
+
+        
+        val = (val >> 1) | old_carry
+
+        self.flag("N", bitval=bool(val & 0x80))
+        self.flag("Z", bitval=bool(val == 0x00))
+
+        if is_accumulator:
+            self.a = val
+        else:
+            self.mem[addr] = val
+
     def bit_(self, op1=None, op2=None, code=None):
         if self.a & (self.value + 256+self.val2) == 0x00:
             self.flag("Z", bitval=True)
@@ -422,6 +505,21 @@ class CPU:
     def beq_(self, op1=None, op2=None, code=None):
         if self.stat & 0x02:
             self.jmp_(op1, op2)
+    def jsr_(self, op1=None, op2=None, code=None):
+        targ = (op2 << 8) | op1
+        ret = self.pc - 1
+        self.mem[0x0100 + self.s] = (ret >> 8) & 0xFF
+        self.sp = (self.sp - 1) & 0xFF
+        self.mem[0x0100 + self.s] = ret & 0xFF
+        self.sp = (self.s - 1) & 0xFF
+        self.pc = targ
+    def rts_(self, op1=None, op2=None, code=None):
+        self.sp = (self.sp) +1
+        jl = self.mem[0x100 + self.sp]
+        self.s = (self.s + 1) & 0xFF
+        jh = self.mem[0x0100 + self.sp]
+        fja = ((jh << 8) | jl) + 1
+        self.pc = fja
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
@@ -454,19 +552,17 @@ class Attempt6502_Window:
         self.render_text(f"sr=%{sr:08b}", 20, 220, 0xFFFF00)
         self.render_text(f"   %nv-bdizc", 20, 260, 0xFFFF7F)
     def func_name(self, func):
-        # 1. if already a string, just return it directly
+        
         if isinstance(func, str):
             return func
             
-        # 2. if None, return a fallback
         if func is None:
             return "UNK"
             
-        # 3. if it's a function, return  __name__ attribute
+    
         if hasattr(func, '__name__'):
             return func.__name__
             
-        # 4. ultimate fallback if something else entirely
         return str(func)
 
     def run(self):
@@ -497,17 +593,14 @@ class Attempt6502_Window:
             cpu.next2 = cpu.mem[cpu.pc+2]
             butes = cpu.numbytes[cpu.curr]
             bwtes = cpu.numbytes[cpu.mem[cpu.pc + butes]]
-            # 1. grab the current instruction method from the dictionary
+            
             current_instr = cpu.mnem[cpu.curr]
             next_instr = cpu.mnem[cpu.mem[cpu.pc + butes]]
-            # 2. extract function name cleanly (e.g., <bound method CPU.adc_ ...> -> "ADC")
+            
             mnemonic = self.func_name(current_instr).rstrip('_').upper()
             mnemonicnext = self.func_name(next_instr).rstrip('_').upper()
-            # 3. get the addressing mode method object (e.g., self.impl)
             mode_method = cpu.addrmodes[cpu.curr]
             mode_methodn = cpu.addrmodes[cpu.mem[cpu.pc + butes]]
-            # 4. use that method object DIRECTLY to look up prefix/suffix list
-            # if the mode is missing (like self.impl), default to empty strings ["", ""]
             symbols = cpu.addrsym.get(mode_method, ["", ""])
             symbolsn = cpu.addrsym.get(mode_methodn, ["", ""])
             prefix = symbols[0]
@@ -547,10 +640,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         bin_file_path = sys.argv[1]
         with open(bin_file_path, "rb") as file:
-            # Read all binary content
             raw_data = file.read()
-            
-            # Convert raw binary bytes into a Python list of integers
             program = list(raw_data)
     else:
         data = input("Enter bytes: ")
@@ -559,11 +649,15 @@ if __name__ == "__main__":
         cpu.mem[i+0x8000] = program[i]
     disp = Attempt6502_Window()
     disp.run()
-# Downcycle 5 Version
+# Version: Upcycle 5 (pd5u)
 # Ready to Commit: Yes
-#                             HI CODE PD
-#[DOWNCYCLE]          UPCYCLE            DOWNCYCLE (repeats)
-#           LO CODE PD
+# To Do:
+"""
+ASCII in MemView (H05)
+"""
+#                HIGH
+# DOWN       UP
+#      LOW
 # Next Steps:
 # CPU:
 # ADC AND ASL BCC BCS BEQ BIT BMI BNE BPL BRK BVC BVS CLC
@@ -571,9 +665,9 @@ if __name__ == "__main__":
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
 #  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-# H05  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  l05 l05 l06
+#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  H05
 # RTS SBC SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
-# H05  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
+#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
 # PYGAME INITIALIZATION ✓ 
 # REGISTER DISPLAY ✓ 
 # FLAGS ✓ 
@@ -581,6 +675,6 @@ if __name__ == "__main__":
 # MEMORY VIEWER ✓ 
 # PRIMITIVE CODE EDITOR ✓ 
 # DISASSEMBLY ✓ 
-# EXPAND MEMORY VIEWER TO DISPLAY ASCII l05
-# EXPAND DISASSEMBLY h05
+# EXPAND MEMORY VIEWER TO DISPLAY ASCII H05
+# EXPAND DISASSEMBLY l06/h06
 # CODE EDITOR after all done
