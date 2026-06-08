@@ -520,6 +520,8 @@ class CPU:
         jh = self.mem[0x0100 + self.sp]
         fja = ((jh << 8) | jl) + 1
         self.pc = fja
+    def rti_(self, op1=None, op2=None, code=None):
+        pass#Unimplemented
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
@@ -528,7 +530,7 @@ class CPU:
         self.mnem[self.curr](self.value, self.val2, self.curr)
         self.pc += self.numbytes[self.curr]
 class Attempt6502_Window:
-    def __init__(self, width=1600, height=700, title="Attempt-6502"):
+    def __init__(self, width=1800, height=700, title="Attempt-6502"):
         pygame.init()
         self.width = width
         self.height = height
@@ -537,6 +539,7 @@ class Attempt6502_Window:
         pygame.display.set_caption(self.title)
         self.font = pygame.font.SysFont("Cascadia Code", 24)
         self.page = 0x00
+        self.darkascii = 0
     def render_text(self, text, x, y, color=0x000000, antialias=True):
         red = (color & 0xFF0000) >> 16
         green = (color & 0x00FF00) >> 8
@@ -548,6 +551,7 @@ class Attempt6502_Window:
         self.render_text(f"x=${x:02x}", 20, 60, 0x00FF00)
         self.render_text(f"y=${y:02x}", 20, 100, 0x0000FF)
         self.render_text(f"pc=${pc:04x}", 20, 140, 0x00FFFF)
+        self.render_text(f"${pc:04x}", 300, 20, 0x00FFFF)
         self.render_text(f"sp=${sp:02x}", 20, 180, 0xFF00FF)
         self.render_text(f"sr=%{sr:08b}", 20, 220, 0xFFFF00)
         self.render_text(f"   %nv-bdizc", 20, 260, 0xFFFF7F)
@@ -564,7 +568,12 @@ class Attempt6502_Window:
             return func.__name__
             
         return str(func)
-
+    def char_(self, l):
+        if l < 0x20:
+            self.darkascii = 0x7F7F7F
+            return "."
+        self.darkascii = 0xFFFFFF
+        return chr(l)
     def run(self):
         clock = pygame.time.Clock()
         running = True
@@ -595,42 +604,48 @@ class Attempt6502_Window:
             bwtes = cpu.numbytes[cpu.mem[cpu.pc + butes]]
             
             current_instr = cpu.mnem[cpu.curr]
-            next_instr = cpu.mnem[cpu.mem[cpu.pc + butes]]
-            
             mnemonic = self.func_name(current_instr).rstrip('_').upper()
-            mnemonicnext = self.func_name(next_instr).rstrip('_').upper()
             mode_method = cpu.addrmodes[cpu.curr]
-            mode_methodn = cpu.addrmodes[cpu.mem[cpu.pc + butes]]
             symbols = cpu.addrsym.get(mode_method, ["", ""])
-            symbolsn = cpu.addrsym.get(mode_methodn, ["", ""])
             prefix = symbols[0]
-            prefixn = symbolsn[0]
             suffix = symbols[1]
-            suffixn = symbolsn[1]
-            butes = butes
-            bwtes = bwtes
             if butes == 1:
                 display_text = f"{mnemonic}"
             if butes == 2:
                 display_text = f"{mnemonic} {prefix}{cpu.next:02x}{suffix}"
             if butes == 3:
                 display_text = f"{mnemonic} {prefix}{cpu.next:02x}{cpu.next2:02x}{suffix}"
-            if bwtes == 1:
-                display_text2 = f"{mnemonicnext}"
-            if bwtes == 2:
-                display_text2 = f"{mnemonicnext} {prefixn}{cpu.mem[cpu.pc + butes + 1]:02x}{suffix}"
-            if bwtes == 3:
-                display_text2 = f"{mnemonic} {prefixn}{cpu.mem[cpu.pc + butes + 1]:02x}{cpu.mem[cpu.pc + butes + 2]:02x}{suffixn}"
+            pcdisasm = cpu.pc + butes
             self.render_text(display_text, 400, 20, 0xff7f00)
-            self.render_text(display_text2, 400, 60, 0xcc5c00)
-            self.render_text(f"{self.page:02x}", -1.25*45 + 800, 0*30 + 20, 0xFFFFFF)
+            for i in range(1,10+1,1):
+                next_instr = cpu.mnem[cpu.mem[pcdisasm]]
+                mnemonicnext = self.func_name(next_instr).rstrip('_').upper()
+                mode_methodn = cpu.addrmodes[cpu.mem[pcdisasm]]
+                symbolsn = cpu.addrsym.get(mode_methodn, ["", ""])
+                prefixn = symbolsn[0]
+                suffixn = symbolsn[1]
+                if bwtes == 1:
+                    display_text2 = f"{mnemonicnext}"
+                if bwtes == 2:
+                    display_text2 = f"{mnemonicnext} {prefixn}{cpu.mem[pcdisasm + 1]:02x}{suffix}"
+                if bwtes == 3:
+                    display_text2 = f"{mnemonic} {prefixn}{cpu.mem[pcdisasm + 1]:02x}{cpu.mem[pcdisasm + 2]:02x}{suffixn}"
+                self.render_text(display_text2, 400, 20 + 40*i, 0xcc5c00)
+                self.render_text(f"${pcdisasm:04x}", 300, 20 + 40*i, 0xcc5c00)
+                pcdisasm += bwtes
+                bwtes = cpu.numbytes[cpu.mem[pcdisasm]]
+
+            self.render_text(f"{self.page:02x}", -1.25*45 + 650, 0*30 + 20, 0xFFFFFF)
             for j in range(16):
-                self.render_text(f"0{j:01x}", j*45 + 800 , 0*30 + 20, 0xFFFFFF)
+                self.render_text(f"0{j:01x}", j*45 + 650 , 0*30 + 20, 0xFFFFFF)
+                self.render_text(f"{j:01x}", j*15 + 1500 , 0*30 + 20, 0xFFFFFF)
             for i in range(16):
-                self.render_text(f"{i:01x}0", -1.25*45 + 800 , i*30 + 60, 0xFFFFFF)
+                self.render_text(f"{i:01x}0", -1.25*45 + 650 , i*30 + 60, 0xFFFFFF)
+                self.render_text(f"{i:01x}0", -1.25*45 + 1500 , i*30 + 60, 0xFFFFFF)
             for i in range(16):
                 for j in range(16):
-                    self.render_text(f"{cpu.mem[16*i + j + (self.page * 0x100)]:02x}", j*45 + 800 , i*30 + 60, 0xFFFFFF)
+                    self.render_text(f"{cpu.mem[16*i + j + (self.page * 0x100)]:02x}", j*45 + 650 , i*30 + 60, 0xFFFFFF)
+                    self.render_text(f"{self.char_(cpu.mem[16*i + j + (self.page * 0x100)])}", j*15 + 1500 , i*30 + 60, self.darkascii)
             pygame.display.flip()
             clock.tick(60)
         pygame.quit()
@@ -643,17 +658,23 @@ if __name__ == "__main__":
             raw_data = file.read()
             program = list(raw_data)
     else:
-        data = input("Enter bytes: ")
+        inp =""
+        data = ""
+        while inp != "~compile":
+            inp = input("Enter bytes: ")
+            if inp == "~compile":
+                break
+            data += inp
+        print(data)
         program = [int(b, 16) for b in data.split()]
     for i in range(len(program)):
         cpu.mem[i+0x8000] = program[i]
     disp = Attempt6502_Window()
     disp.run()
-# Version: Upcycle 5 (pd5u)
+# Version: Downcycle 6 (pd6d)
 # Ready to Commit: Yes
 # To Do:
 """
-ASCII in MemView (H05)
 """
 #                HIGH
 # DOWN       UP
@@ -665,7 +686,7 @@ ASCII in MemView (H05)
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
 #  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  H05
+#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  h06
 # RTS SBC SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
 #  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
 # PYGAME INITIALIZATION ✓ 
@@ -675,6 +696,6 @@ ASCII in MemView (H05)
 # MEMORY VIEWER ✓ 
 # PRIMITIVE CODE EDITOR ✓ 
 # DISASSEMBLY ✓ 
-# EXPAND MEMORY VIEWER TO DISPLAY ASCII H05
-# EXPAND DISASSEMBLY l06/h06
-# CODE EDITOR after all done
+# EXPAND MEMORY VIEWER TO DISPLAY ASCII ✓ 
+# EXPAND DISASSEMBLY ✓ 
+# CODE EDITOR h06

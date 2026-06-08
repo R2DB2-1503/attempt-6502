@@ -2,7 +2,7 @@ import pygame
 import sys
 
 pygame.init()
-screen = pygame.display.set_mode((1600, 700))
+screen = pygame.display.set_mode((1800, 700))
 pygame.display.set_caption("Mouse Position Tracker")
 clock = pygame.time.Clock()
 
