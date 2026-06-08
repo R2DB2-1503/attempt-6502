@@ -595,6 +595,9 @@ class Attempt6502_Window:
                         self.page = (self.page - 0x01) & 0xFF
                     if event.key == pygame.K_RIGHT:
                         self.page = (self.page + 0x10) & 0xFF
+                    if event.key == pygame.K_ESCAPE:
+                        pygame.QUIT()
+                        sys.exit(0)
             self.screen.fill((0,0,0))
             self.regdisplay(cpu.a, cpu.x, cpu.y, cpu.pc, cpu.stat, cpu.sp)
             cpu.curr = cpu.mem[cpu.pc]
@@ -664,6 +667,8 @@ if __name__ == "__main__":
             inp = input("Enter bytes: ")
             if inp == "~compile":
                 break
+            if inp == "~exit":
+                sys.exit(0)
             data += inp
         print(data)
         program = [int(b, 16) for b in data.split()]
@@ -671,8 +676,8 @@ if __name__ == "__main__":
         cpu.mem[i+0x8000] = program[i]
     disp = Attempt6502_Window()
     disp.run()
-# Version: Downcycle 6 (pd6d)
-# Ready to Commit: Yes
+# Version: Upcycle 6 (pd6u)
+# Ready to Commit: No
 # To Do:
 """
 """
@@ -698,4 +703,5 @@ if __name__ == "__main__":
 # DISASSEMBLY ✓ 
 # EXPAND MEMORY VIEWER TO DISPLAY ASCII ✓ 
 # EXPAND DISASSEMBLY ✓ 
-# CODE EDITOR h06
+# CODE EDITOR soon.
+# 128x64 SCREEN h07 start
