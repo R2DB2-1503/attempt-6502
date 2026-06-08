@@ -1,16 +1,20 @@
 import pygame, sys
 class CPU:
     def __init__(self):
+        self.mem = [0x00] * 65536
         self.a = 0x00
         self.x = 0x00
         self.y = 0x00
         self.pc = 0x8000
+        self.irq = 0x8000
+        self.rst = 0x8000
+        self.nmi = 0x8000
         self.sp = 0xFF
         self.stat = 0b00100000
-        self.mem = [0x00] * 65536
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
         self.next2 = self.mem[self.pc+2]
+        self.ver = "pd7d"
         self.value = 0x00
         self.val2 = 0x00
         self.mnem = {
@@ -62,9 +66,9 @@ class CPU:
             0xE6: self.zp, 0xF6: self.zpix, 0xEE: self.abslt, 0xFE: self.absix,
             0xC6: self.zp, 0xD6: self.zpix, 0xCE: self.abslt, 0xDE: self.absix,
             0xCA: self.impl, 0xE8: self.impl, 0x88: self.impl, 0xC8: self.impl,
-            0x85: self.zp, 0x95: self.zpix, 0x8D: self.abslt, 0x9D: self.absix, 0x99: self.absiy, 0x81: self.indix, 0x91: self.indiy,
-            0x86: self.zp, 0x96: self.zpiy, 0x8E: self.abslt,
-            0x84: self.zp, 0x94: self.zpix, 0x8C: self.abslt,
+            0x85: self.zp_, 0x95: self.zpix_, 0x8D: self.abslt_, 0x9D: self.absix_, 0x99: self.absiy_, 0x81: self.indix, 0x91: self.indiy,
+            0x86: self.zp_, 0x96: self.zpiy_, 0x8E: self.abslt_,
+            0x84: self.zp_, 0x94: self.zpix_, 0x8C: self.abslt_,
             0xEA: self.impl, 0xAA: self.impl, 0x8A: self.impl, 0xA8: self.impl, 0x98: self.impl, 0x9A: self.impl, 0xBA: self.impl,
             0xC9: self.imd, 0xC5: self.zp, 0xD5: self.zpix, 0xCD: self.abslt, 0xDD: self.absix, 0xD9: self.absiy, 0xC1: self.indix, 0xD1: self.indiy,
             0xE0: self.imd, 0xE4: self.zp, 0xEC: self.abslt,
@@ -146,6 +150,7 @@ class CPU:
         self.addrsym = { # In form Mode, Prefix, Suffix
             self.imd: ["#$",""],
             self.zp: ["$",""],
+            self.zp_: ["$",""],
             self.zpix_: ["$",",X"],
             self.zpix: ["$",",X"],
             self.zpiy_: ["$",",Y"],
@@ -167,12 +172,12 @@ class CPU:
         self.value = op1
     def zp(self, op1, op2, code):
         self.value = self.mem[op1]
+    def zp_(self, op1, op2, code):
+        self.value = op1
     def zpix_(self, op1, op2, code):
         self.value = op1
     def zpix(self, op1, op2, code):
         self.value = self.mem[(op1 + self.x) % 0x100]
-    def zpix_(self, op1, op2, code):
-        self.value = op1 + self.x
     def zpiy(self, op1, op2, code):
         self.value = self.mem[(op1 + self.y) % 0x100]
     def zpiy_(self, op1, op2, code):
@@ -521,7 +526,34 @@ class CPU:
         fja = ((jh << 8) | jl) + 1
         self.pc = fja
     def rti_(self, op1=None, op2=None, code=None):
-        pass#Unimplemented
+        self.plp_()
+        tempa = self.a
+        self.pla_()
+        high = self.a
+        self.pla_()
+        low = self.a
+        self.a = tempa
+        self.jmp(low, high)
+    def irq_(self, op1=None, op2=None, code=None):
+        if self.stat & 0x04:
+            pass
+        else:
+            self.interrupt_seq_(self.irq)
+    def nmi_(self, op1=None, op2=None, code=None):
+        self.interrupt_seq_(self.nmi)
+    def interrupt_seq_(self, addr):
+        high = (self.pc & 0xFF00) >> 8
+        low = (self.pc & 0x00FF)
+        tempa = self.a
+        self.a = high
+        self.pha_()
+        self.a = low
+        self.pha_()
+        self.php_()
+        self.a = tempa
+        ihigh = (addr & 0xFF00) >> 8
+        ilow = (addr & 0x00FF)
+        self.jmp_(ilow, ihigh)
     def executeinst(self):
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
@@ -529,6 +561,20 @@ class CPU:
         self.addrmodes[self.curr](self.next, self.next2, self.curr)
         self.mnem[self.curr](self.value, self.val2, self.curr)
         self.pc += self.numbytes[self.curr]
+    def reset_(self):
+        self.a = 0x00
+        self.x = 0x00
+        self.y = 0x00
+        self.nmi = self.mem[0xfffa] + 256*self.mem[0xfffb]
+        self.pc = self.mem[0xfffc] + 256*self.mem[0xfffd]
+        self.irq = self.mem[0xfffe] + 256*self.mem[0xffff]
+        self.sp = 0xFF
+        self.stat = 0b00100000
+        self.curr = self.mem[self.pc]
+        self.next = self.mem[self.pc+1]
+        self.next2 = self.mem[self.pc+2]
+        self.value = 0x00
+        self.val2 = 0x00
 class Attempt6502_Window:
     def __init__(self, width=1800, height=700, title="Attempt-6502"):
         pygame.init()
@@ -577,6 +623,7 @@ class Attempt6502_Window:
     def run(self):
         clock = pygame.time.Clock()
         running = True
+        cpu.pc = cpu.mem[0xfffc] + 256*cpu.mem[0xfffd]
         while running:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_SPACE]:
@@ -594,10 +641,18 @@ class Attempt6502_Window:
                     if event.key == pygame.K_LEFT:
                         self.page = (self.page - 0x01) & 0xFF
                     if event.key == pygame.K_RIGHT:
-                        self.page = (self.page + 0x10) & 0xFF
+                        self.page = (self.page + 0x01) & 0xFF
+                    if event.key == pygame.K_i:
+                        if event.mod & pygame.KMOD_SHIFT:
+                            cpu.nmi_()
+                        else:
+                            cpu.irq_()
+                    if event.key == pygame.K_r:
+                        if event.mod & pygame.KMOD_SHIFT:
+                            cpu.reset_()
                     if event.key == pygame.K_ESCAPE:
+                        running = False
                         pygame.QUIT()
-                        sys.exit(0)
             self.screen.fill((0,0,0))
             self.regdisplay(cpu.a, cpu.x, cpu.y, cpu.pc, cpu.stat, cpu.sp)
             cpu.curr = cpu.mem[cpu.pc]
@@ -649,6 +704,7 @@ class Attempt6502_Window:
                 for j in range(16):
                     self.render_text(f"{cpu.mem[16*i + j + (self.page * 0x100)]:02x}", j*45 + 650 , i*30 + 60, 0xFFFFFF)
                     self.render_text(f"{self.char_(cpu.mem[16*i + j + (self.page * 0x100)])}", j*15 + 1500 , i*30 + 60, self.darkascii)
+            self.render_text(cpu.ver, 20 , 660, 0x444444)
             pygame.display.flip()
             clock.tick(60)
         pygame.quit()
@@ -661,23 +717,19 @@ if __name__ == "__main__":
             raw_data = file.read()
             program = list(raw_data)
     else:
-        inp =""
-        data = ""
-        while inp != "~compile":
-            inp = input("Enter bytes: ")
-            if inp == "~compile":
+        while True:
+            data = input("Enter bytes: ")
+            start = input("Enter start point: ")
+            print(data)
+            program = [int(b, 16) for b in data.split()]
+            for i in range(len(program)):
+                cpu.mem[i+int(start,16)] = program[i]
+            if start == "fffa":
                 break
-            if inp == "~exit":
-                sys.exit(0)
-            data += inp
-        print(data)
-        program = [int(b, 16) for b in data.split()]
-    for i in range(len(program)):
-        cpu.mem[i+0x8000] = program[i]
     disp = Attempt6502_Window()
     disp.run()
-# Version: Upcycle 6 (pd6u)
-# Ready to Commit: No
+# Version: Downcycle 7 (pd7d)
+# Ready to Commit: YES
 # To Do:
 """
 """
@@ -691,9 +743,10 @@ if __name__ == "__main__":
 # CLD CLI CLV CMP CPX CPY DEC DEX DEY EOR INC INX INY JMP
 #  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  
 # JSR LDA LDX LDY LSR NOP ORA PHA PHP PLA PLP ROL ROR RTI
-#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓  h06
+#  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
 # RTS SBC SEC SED SEI STA STX STY TAX TAY TSX TXA TXS TYA
 #  ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓   ✓ 
+# RESET  ✓ 
 # PYGAME INITIALIZATION ✓ 
 # REGISTER DISPLAY ✓ 
 # FLAGS ✓ 
