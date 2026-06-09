@@ -14,7 +14,7 @@ class CPU:
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
         self.next2 = self.mem[self.pc+2]
-        self.ver = "alphaInit"
+        self.ver = "α1d"
         self.value = 0x00
         self.val2 = 0x00
         self.mnem = {
@@ -249,7 +249,7 @@ class CPU:
         self.flag("n", bool(self.a & 0x80))
         self.flag("v", bool((old_a ^ self.a) & (op1_not ^ self.a) & 0x80))
 
-    def and_(self, op1):
+    def and_(self, op1=None, op2=None, code=None):
         self.a &= op1
         if self.a == 0:
             self.flag("Z", bitval=True)
@@ -698,7 +698,18 @@ class Attempt6502_Window:
                     self.render_text(f"{cpu.mem[16*i + j + (self.page * 0x100)]:02x}", j*45 + 650 , i*30 + 60, 0xFFFFFF)
                     self.render_text(f"{self.char_(cpu.mem[16*i + j + (self.page * 0x100)])}", j*15 + 1500 , i*30 + 60, self.darkascii)
             self.render_text(cpu.ver, 20, 660, 0x444444)
-            self.render_text("Controls: \nSpace (Hold): Run\nN: Step\nShift+R: Reset\nI: IRQ\nShift+I: NMI", 20, 330, 0x7f7f7f)
+            i = 330
+            Controls = [
+                "Controls:",
+                "Space (Hold): Run",
+                "N: Step",
+                "I: IRQ",
+                "Shift+R: Reset",
+                "Shift+I: NMI",
+            ]
+            for item in Controls:
+                self.render_text(item, 20, i, 0x7f7f7f)
+                i += 30
             pygame.display.flip()
             clock.tick(60)
         pygame.quit()
@@ -722,10 +733,11 @@ if __name__ == "__main__":
                 break
     disp = Attempt6502_Window()
     disp.run()
-# Version: Alpha Testing Initial Commit
+# Version: Alpha Downcycle 1
 # Ready to Commit: YES
 # To Do:
 """
+Fix: I#1 Controls not wrap (FIXED)
 """
 #                HIGH
 # DOWN       UP
