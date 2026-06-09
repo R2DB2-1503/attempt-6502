@@ -14,7 +14,7 @@ class CPU:
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
         self.next2 = self.mem[self.pc+2]
-        self.ver = "pd7d"
+        self.ver = "alphaInit"
         self.value = 0x00
         self.val2 = 0x00
         self.mnem = {
@@ -84,12 +84,12 @@ class CPU:
             0x40: self.impl,
         }
         self.numbytes = {
-            0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2, # ADC
-            0x29: 2, 0x25: 2, 0x35: 2, 0x2D: 3, 0x3D: 3, 0x39: 3, 0x21: 2, 0x31: 2, # AND
+            0x69: 2, 0x65: 2, 0x75: 2, 0x6D: 3, 0x7D: 3, 0x79: 3, 0x61: 2, 0x71: 2,
+            0x29: 2, 0x25: 2, 0x35: 2, 0x2D: 3, 0x3D: 3, 0x39: 3, 0x21: 2, 0x31: 2, 
             0x0A: 1, 0x06: 2, 0x16: 2, 0x0E: 3, 0x1E: 3,  
             0x4A: 1, 0x46: 2, 0x56: 2, 0x4E: 3, 0x5E: 3,
             0x2A: 1, 0x26: 2, 0x36: 2, 0x2E: 3, 0x3E: 3,  
-            0x6A: 1, 0x66: 2, 0x76: 2, 0x6E: 3, 0x7E: 3,                            # ASL
+            0x6A: 1, 0x66: 2, 0x76: 2, 0x6E: 3, 0x7E: 3,                            
             0x24: 2, 0x2C: 3,
             0xA9: 2, 0xA5: 2, 0xB5: 2, 0xAD: 3, 0xBD: 3, 0xB9: 3, 0xA1: 2, 0xB1: 2,
             0xA2: 2, 0xA6: 2, 0xB6: 2, 0xAE: 3, 0xBE: 3,
@@ -602,17 +602,12 @@ class Attempt6502_Window:
         self.render_text(f"sr=%{sr:08b}", 20, 220, 0xFFFF00)
         self.render_text(f"   %nv-bdizc", 20, 260, 0xFFFF7F)
     def func_name(self, func):
-        
         if isinstance(func, str):
             return func
-            
         if func is None:
             return "UNK"
-            
-    
         if hasattr(func, '__name__'):
             return func.__name__
-            
         return str(func)
     def char_(self, l):
         if l < 0x20:
@@ -660,7 +655,6 @@ class Attempt6502_Window:
             cpu.next2 = cpu.mem[cpu.pc+2]
             butes = cpu.numbytes[cpu.curr]
             bwtes = cpu.numbytes[cpu.mem[cpu.pc + butes]]
-            
             current_instr = cpu.mnem[cpu.curr]
             mnemonic = self.func_name(current_instr).rstrip('_').upper()
             mode_method = cpu.addrmodes[cpu.curr]
@@ -692,7 +686,6 @@ class Attempt6502_Window:
                 self.render_text(f"${pcdisasm:04x}", 300, 20 + 40*i, 0xcc5c00)
                 pcdisasm += bwtes
                 bwtes = cpu.numbytes[cpu.mem[pcdisasm]]
-
             self.render_text(f"{self.page:02x}", -1.25*45 + 650, 0*30 + 20, 0xFFFFFF)
             for j in range(16):
                 self.render_text(f"0{j:01x}", j*45 + 650 , 0*30 + 20, 0xFFFFFF)
@@ -704,7 +697,8 @@ class Attempt6502_Window:
                 for j in range(16):
                     self.render_text(f"{cpu.mem[16*i + j + (self.page * 0x100)]:02x}", j*45 + 650 , i*30 + 60, 0xFFFFFF)
                     self.render_text(f"{self.char_(cpu.mem[16*i + j + (self.page * 0x100)])}", j*15 + 1500 , i*30 + 60, self.darkascii)
-            self.render_text(cpu.ver, 20 , 660, 0x444444)
+            self.render_text(cpu.ver, 20, 660, 0x444444)
+            self.render_text("Controls: \nSpace (Hold): Run\nN: Step\nShift+R: Reset\nI: IRQ\nShift+I: NMI", 20, 330, 0x7f7f7f)
             pygame.display.flip()
             clock.tick(60)
         pygame.quit()
@@ -724,11 +718,11 @@ if __name__ == "__main__":
             program = [int(b, 16) for b in data.split()]
             for i in range(len(program)):
                 cpu.mem[i+int(start,16)] = program[i]
-            if start == "fffa":
+            if start.lower() == "fffa":
                 break
     disp = Attempt6502_Window()
     disp.run()
-# Version: Downcycle 7 (pd7d)
+# Version: Alpha Testing Initial Commit
 # Ready to Commit: YES
 # To Do:
 """
@@ -756,5 +750,5 @@ if __name__ == "__main__":
 # DISASSEMBLY ✓ 
 # EXPAND MEMORY VIEWER TO DISPLAY ASCII ✓ 
 # EXPAND DISASSEMBLY ✓ 
-# CODE EDITOR soon.
+# CODE EDITOR on hiatus
 # 128x64 SCREEN h07 start
