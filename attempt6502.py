@@ -14,7 +14,7 @@ class CPU:
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
         self.next2 = self.mem[self.pc+2]
-        self.ver = "α1d"
+        self.ver = "α1u"
         self.value = 0x00
         self.val2 = 0x00
         self.mnem = {
@@ -166,7 +166,6 @@ class CPU:
             self.indir: ["[$","]"],
             self.indix: ["[$",",X]"],
             self.indiy: ["[$","],Y"],
-            
         }
     def imd(self, op1, op2, code):
         self.value = op1
@@ -223,13 +222,9 @@ class CPU:
     def adc_(self, op1=None, op2=None, code=None):
         c_in = 0 if (self.stat & self.statbits["c"]) else 256
         old_a = self.a
-        
         op1_not = op1 & 0xFF
         result = old_a + op1_not + c_in
-        
         self.a = result & 0xFF
-        
-        
         self.flag("c", result > 0xFF)
         self.flag("z", self.a == 0)
         self.flag("n", bool(self.a & 0x80))
@@ -237,125 +232,85 @@ class CPU:
     def sbc_(self, op1=None, op2=None, code=None):
         c_in = 1 if (self.stat & self.statbits["c"]) else 0
         old_a = self.a
-        
         op1_not = (~op1) & 0xFF
         result = old_a + op1_not + c_in
-        
         self.a = result & 0xFF
-        
-        
         self.flag("c", result > 0xFF)
         self.flag("z", self.a == 0)
         self.flag("n", bool(self.a & 0x80))
         self.flag("v", bool((old_a ^ self.a) & (op1_not ^ self.a) & 0x80))
-
     def and_(self, op1=None, op2=None, code=None):
         self.a &= op1
         if self.a == 0:
             self.flag("Z", bitval=True)
         else:
             self.flag("Z", bitval=False)
-            
         if self.a & 0x80:
             self.flag("N", bitval=True)
         else:
             self.flag("N", bitval=False)
     def asl_(self, op1=None, op2=None, code=None):
-        
         is_accumulator = (code == 0x0A)
         addr = op1 + 256 * op2 if not is_accumulator else None
         val = self.a if is_accumulator else self.mem[addr]
-
-        
         if val & 0x80:
             self.sec_()
         else:
             self.clc_()
-
-        
         val = (val << 1) & 0xFF
-
-        
         self.flag("N", bitval=bool(val & 0x80))
         self.flag("Z", bitval=bool(val == 0x00))
-
-        
         if is_accumulator:
             self.a = val
         else:
             self.mem[addr] = val
-
     def lsr_(self, op1=None, op2=None, code=None):
         is_accumulator = (code == 0x4A)
         addr = op1 + 256 * op2 if not is_accumulator else None
         val = self.a if is_accumulator else self.mem[addr]
-
-        
         if val & 0x01:
             self.sec_()
         else:
-            self.clc_()
-
-        
+            self.clc_() 
         val >>= 1
-
-        
         self.flag("N", bitval=False)
         self.flag("Z", bitval=bool(val == 0x00))
-
         if is_accumulator:
             self.a = val
         else:
             self.mem[addr] = val
-
     def rol_(self, op1=None, op2=None, code=None):
         is_accumulator = (code == 0x2A)
         addr = op1 + 256 * op2 if not is_accumulator else None
         val = self.a if is_accumulator else self.mem[addr]
-
-        
         old_carry = 1 if self.get_carry() else 0 
-
-        
         if val & 0x80:
             self.sec_()
         else:
             self.clc_()
-
-        
         val = ((val << 1) | old_carry) & 0xFF
-
         self.flag("N", bitval=bool(val & 0x80))
         self.flag("Z", bitval=bool(val == 0x00))
-
         if is_accumulator:
             self.a = val
         else:
             self.mem[addr] = val
-
     def ror_(self, op1=None, op2=None, code=None):
         is_accumulator = (code == 0x6A)
         addr = op1 + 256 * op2 if not is_accumulator else None
         val = self.a if is_accumulator else self.mem[addr]
-
-        
         old_carry = 0x80 if self.get_carry() else 0 
         if val & 0x01:
             self.sec_()
         else:
             self.clc_()
-
-        
         val = (val >> 1) | old_carry
-
         self.flag("N", bitval=bool(val & 0x80))
         self.flag("Z", bitval=bool(val == 0x00))
-
         if is_accumulator:
             self.a = val
         else:
             self.mem[addr] = val
-
     def bit_(self, op1=None, op2=None, code=None):
         if self.a & (self.value + 256+self.val2) == 0x00:
             self.flag("Z", bitval=True)
@@ -375,7 +330,6 @@ class CPU:
             self.flag("Z", bitval=True)
         else:
             self.flag("Z", bitval=False)
-            
         if self.a & 0x80:
             self.flag("N", bitval=True)
         else:
@@ -386,7 +340,6 @@ class CPU:
             self.flag("Z", bitval=True)
         else:
             self.flag("Z", bitval=False)
-            
         if self.x & 0x80:
             self.flag("N", bitval=True)
         else:
@@ -396,8 +349,7 @@ class CPU:
         if self.y == 0:
             self.flag("Z", bitval=True)
         else:
-            self.flag("Z", bitval=False)
-            
+            self.flag("Z", bitval=False)            
         if self.y & 0x80:
             self.flag("N", bitval=True)
         else:
@@ -733,11 +685,10 @@ if __name__ == "__main__":
                 break
     disp = Attempt6502_Window()
     disp.run()
-# Version: Alpha Downcycle 1
+# Version: Alpha Upcycle 1
 # Ready to Commit: YES
 # To Do:
 """
-Fix: I#1 Controls not wrap (FIXED)
 """
 #                HIGH
 # DOWN       UP
