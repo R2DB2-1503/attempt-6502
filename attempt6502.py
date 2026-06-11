@@ -14,7 +14,7 @@ class CPU:
         self.curr = self.mem[self.pc]
         self.next = self.mem[self.pc+1]
         self.next2 = self.mem[self.pc+2]
-        self.ver = "α1u"
+        self.ver = "α2d"
         self.value = 0x00
         self.val2 = 0x00
         self.mnem = {
@@ -528,7 +528,7 @@ class CPU:
         self.value = 0x00
         self.val2 = 0x00
 class Attempt6502_Window:
-    def __init__(self, width=1800, height=700, title="Attempt-6502"):
+    def __init__(self, width=1800, height=1000, title="Attempt-6502"):
         pygame.init()
         self.width = width
         self.height = height
@@ -685,10 +685,11 @@ if __name__ == "__main__":
                 break
     disp = Attempt6502_Window()
     disp.run()
-# Version: Alpha Upcycle 1
+# Version: Alpha Downcycle 2
 # Ready to Commit: YES
 # To Do:
 """
+Screen
 """
 #                HIGH
 # DOWN       UP
